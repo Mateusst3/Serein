@@ -117,7 +117,7 @@ struct UdpFailures(Option<Instant>);
 impl UdpFailures {
 	fn send(
 		&mut self,
-		socket: &UdpSocket,
+		socket: &impl screen_tunnel::Datagram,
 		data: &[u8],
 		outage: &'static str,
 	) -> Result<(), &'static str> {
@@ -146,7 +146,7 @@ fn transient_receive(error: &std::io::Error) -> bool {
 // Native voice UDP ping: signaling heartbeats alone do not maintain an idle
 // media path (notably a receive-only stream or a muted call).
 fn udp_keepalive(
-	socket: &UdpSocket,
+	socket: &impl screen_tunnel::Datagram,
 	failures: &mut UdpFailures,
 	sequence: &mut u32,
 ) -> Result<(), &'static str> {
@@ -1131,7 +1131,7 @@ async fn run_stream_inner(
 	)?;
 	let mut encryption: Option<Encryption> = None;
 	let mut secured_at: Option<Instant> = None;
-	let mut udp: Option<UdpSocket> = None;
+	let mut udp: Option<screen_tunnel::MediaSocket> = None;
 	let mut next_udp_ping = Instant::now();
 	let mut udp_ping_sequence = 0;
 	let mut udp_failures = UdpFailures::default();
@@ -1334,7 +1334,7 @@ async fn run_stream_inner(
 				outgoing_keyframe=frame.keyframe;
 				metrics.finish(crate::diagnostics::Stage::VideoSend,start);
 			},
-			result=async {match &udp {Some(socket)=>socket.recv(&mut packet).await,_=>std::future::pending().await}}=>{
+			result=async {match &mut udp {Some(socket)=>socket.recv(&mut packet).await,_=>std::future::pending().await}}=>{
 				let length=match result {Ok(length)=>length,Err(error) if transient_receive(&error)=>continue,Err(_)=>return Err("Stream UDP receive failed")};
 				if discovering {
 					let (address,port)=discovery(&packet[..length],audio_ssrc)?;
@@ -1409,8 +1409,7 @@ async fn run_stream_inner(
 								if !public_ip(address) && !(cfg!(test) && local_test && address.is_loopback()){return Err("Stream server advertised a nonpublic address");}
 								let port=u16::try_from(number(data,"port")?).ok().filter(|port|*port>0).ok_or("Invalid stream server port")?;
 								if !data["modes"].as_array().is_some_and(|m|m.iter().any(|mode|mode.as_str()==Some(MODE))){return Err("Required stream transport encryption is unavailable");}
-								let socket=UdpSocket::bind(if address.is_ipv4(){"0.0.0.0:0"}else{"[::]:0"}).await.map_err(|_|"Could not bind stream UDP socket")?;
-								socket.connect(SocketAddr::new(address,port)).await.map_err(|_|"Could not connect stream UDP socket")?;
+								let socket=screen_tunnel::MediaSocket::connect(SocketAddr::new(address,port),video.is_some() && !local_test).await?;
 								let mut probe=[0;74];probe[..4].copy_from_slice(&[0,1,0,70]);probe[4..8].copy_from_slice(&audio_ssrc.to_be_bytes());socket.send(&probe).await.map_err(|_|"Stream UDP discovery failed")?;
 								udp=Some(socket);discovering=true;discovery_deadline=Instant::now()+Duration::from_secs(8);emit(Status::Discovering).map_err(|_|"Stream interface closed")?;
 							},
