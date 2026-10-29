@@ -731,6 +731,11 @@ statements in the historical voice/screen-sharing notes below.
 
 ## Outgoing screen sharing — September 11, 2026
 
+An opt-in [WireGuard adapter](screen-share-vpn.md) can tunnel only an outgoing share's
+UDP media, including shared audio and feedback. Signaling and ordinary call media keep
+system routes. DAVE and transport encryption are unchanged. WireGuard compatibility is
+documented by Proton; live Discord interoperability through this adapter is unverified.
+
 October 3 reliability audit: UDP media sends drop on local socket pressure without
 waiting inside the media loop. Established stream rekeys now retain a 30-second
 response/execution deadline, including when WebSocket heartbeats continue.

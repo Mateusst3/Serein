@@ -1,5 +1,14 @@
 # Local storage policy and audit
 
+## Screen-share WireGuard configuration
+
+An explicit launch-time path can select an existing WireGuard configuration for outgoing
+screen-share media. Serein does not save the path, copy the file or persist its keys.
+Reads are capped at 16 KiB, regular-file-only and private-permission-only on Unix;
+file contents and decoded private keys use zeroizing memory. Errors omit secrets and
+configuration contents. Stop sharing to release the tunnel; remove the external file
+to prevent later connections. See [configuration and memory bounds](screen-share-vpn.md).
+
 ## Per-conversation reply and attachment staging (October 16, 2026)
 
 Leaving a conversation keeps its unsent reply target and staged files in session RAM for

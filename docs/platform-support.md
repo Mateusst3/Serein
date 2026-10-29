@@ -1,5 +1,9 @@
 # Platform support and packaging
 
+Outgoing screen-share media can opt into a process-local WireGuard tunnel without OS
+routes or a privileged helper. The media endpoint must be IPv4; ordinary connections
+keep their system routes. See [configuration and limits](screen-share-vpn.md).
+
 ## Window size and placement
 
 Normal window size is saved in logical pixels in the existing device-local SQLite
